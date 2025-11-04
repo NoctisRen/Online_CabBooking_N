@@ -1,0 +1,13 @@
+.user-info-debug {
+  background-color: #e3f2fd;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  border-left: 4px solid #2196f3;
+}
+
+.user-info-debug p {
+  margin: 0;
+  font-size: 14px;
+  color: #1565c0;
+}
