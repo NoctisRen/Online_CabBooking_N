@@ -1,24 +1,37 @@
 package com.masai.mapper;
 
-import com.masai.dto.request.CustomerCreateRequest;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.masai.dto.request.CustomerRequest;
 import com.masai.dto.response.CustomerResponse;
 import com.masai.entity.Customer;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.factory.Mappers;
 
-@Mapper
-public interface DtoMapper {
-    DtoMapper INSTANCE = Mappers.getMapper(DtoMapper.class);
+@Component
+public class DtoMapper {
 
-    @Mapping(source = "journey_status", target = "journeyStatus")
-    CustomerResponse customerToResponse(Customer customer);
+    @Autowired
+    private ModelMapper modelMapper;
 
-    Customer requestToCustomer(CustomerCreateRequest request);
+    public Customer toCustomerEntity(CustomerRequest request) {
+        return modelMapper.map(request, Customer.class);
+    }
 
-    @Mapping(target = "userId", ignore = true)
-    @Mapping(target = "tripBooking", ignore = true)
-    @Mapping(target = "journey_status", ignore = true)
-    void updateCustomerFromRequest(CustomerCreateRequest request, @MappingTarget Customer customer);
+    public CustomerResponse toCustomerResponse(Customer customer) {
+        return modelMapper.map(customer, CustomerResponse.class);
+    }
+
+    public List<CustomerResponse> toCustomerResponseList(List<Customer> customers) {
+        return customers.stream()
+                .map(this::toCustomerResponse)
+                .collect(Collectors.toList());
+    }
+
+    public CustomerRequest toCustomerRequest(Customer customer) {
+        return modelMapper.map(customer, CustomerRequest.class);
+    }
 }

@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.masai.entity.Admin;
+import com.masai.entity.Cab;
 import com.masai.entity.TripBooking;
 import com.masai.exception.AdminExceptions;
 

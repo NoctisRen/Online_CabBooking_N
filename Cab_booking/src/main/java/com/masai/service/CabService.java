@@ -4,6 +4,8 @@ import java.util.List;
 
 import com.masai.entity.Cab;
 import com.masai.exception.NotFoundException;
+import com.masai.exception.InvalidId;
+
 
 
 public interface CabService {

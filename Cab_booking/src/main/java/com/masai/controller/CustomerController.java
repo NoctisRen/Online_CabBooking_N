@@ -12,52 +12,61 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import com.masai.service.CustomerService;
-import com.masai.entity.Customer;
 
+import com.masai.dto.request.CustomerRequest;
+import com.masai.dto.response.CustomerResponse;
+import com.masai.entity.Customer;
+import com.masai.mapper.DtoMapper;
+import com.masai.service.CustomerService;
 
 @RestController
 public class CustomerController {
-	
-	@Autowired
-	private CustomerService service;
-	
-	@GetMapping("/customer/{Id}")
-	public Customer getCustomer(@PathVariable("Id") Integer id)
-	{    
-		return service.findCustomer(id);
-	}
-	@GetMapping("/customers")
-	public List<Customer> getAllCustomer()
-	{    
-		return service.allCustomer();
-	}
-	@GetMapping("/customer/{Email}/{Password}")
-    public ResponseEntity<CustomerResponse> getCustomer(@PathVariable("id") Integer id) {
+
+    @Autowired
+    private CustomerService service;
+
+    @Autowired
+    private DtoMapper dtoMapper;
+
+    @GetMapping("/customer/{id}")
+    public CustomerResponse getCustomer(@PathVariable("id") Integer id) {
         Customer customer = service.findCustomer(id);
-        CustomerResponse response = DtoMapper.INSTANCE.customerToResponse(customer);
-        return ResponseEntity.ok(response);
+        return dtoMapper.toCustomerResponse(customer);
     }
 
-	@PostMapping(value = "/save",consumes = "application/json")
-    public ResponseEntity<CustomerResponse> createCustomer(
-            @Valid @RequestBody CustomerCreateRequest request) {
+    @GetMapping("/customers")
+    public List<CustomerResponse> getAllCustomer() {
+        List<Customer> customers = service.allCustomer();
+        return dtoMapper.toCustomerResponseList(customers);
+    }
 
-        Customer customer = DtoMapper.INSTANCE.requestToCustomer(request);
+    @GetMapping("/customer/{email}/{password}")
+    public CustomerResponse getCustomerByCredentials(
+            @PathVariable("email") String email,
+            @PathVariable("password") String password) {
+        Customer customer = service.vaildCustomer(email, password);
+        return dtoMapper.toCustomerResponse(customer);
+    }
+
+    @PostMapping(value = "/save", consumes = "application/json")
+    public CustomerResponse saveCustomer(@Valid @RequestBody CustomerRequest request) {
+        System.out.println("接收到的请求: " + request);
+        Customer customer = dtoMapper.toCustomerEntity(request);
         Customer savedCustomer = service.saveCustomer(customer);
-        CustomerResponse response = DtoMapper.INSTANCE.customerToResponse(savedCustomer);
-
-        return ResponseEntity.ok(response);
+        return dtoMapper.toCustomerResponse(savedCustomer);
     }
-	@PutMapping("/update/{id}")
-	public Customer updateStudent(@Valid @RequestBody Customer customer,@PathVariable("id")Integer id )
-	{
-		
-		return service.updateCustomer(customer,id);
-	}
+
+    @PutMapping("/update/{id}")
+    public CustomerResponse updateCustomer(
+            @Valid @RequestBody CustomerRequest request,
+            @PathVariable("id") Integer id) {
+        Customer customer = dtoMapper.toCustomerEntity(request);
+        Customer updatedCustomer = service.updateCustomer(customer, id);
+        return dtoMapper.toCustomerResponse(updatedCustomer);
+    }
+
     @DeleteMapping("/customer/delete/{id}")
-	public String delete(@PathVariable("id")Integer id) {
-		
-    	return service.deleteCustomer(id);
-	}
+    public String deleteCustomer(@PathVariable("id") Integer id) {
+        return service.deleteCustomer(id);
+    }
 }

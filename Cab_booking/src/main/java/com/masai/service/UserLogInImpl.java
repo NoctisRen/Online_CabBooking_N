@@ -6,76 +6,87 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.masai.dto.request.LoginRequest;
 import com.masai.entity.CurrentUserSession;
 import com.masai.entity.Customer;
-import com.masai.dto.request.LoginRequest;
-
+import com.masai.entity.CustomerDTO;
 import com.masai.exception.AdminExceptions;
 import com.masai.exception.InvalidPasswordException;
 import com.masai.exception.NotFoundException;
 import com.masai.exception.UserAlreadyExistWithuserId;
-import com.masai.repository.AdminDao;
 import com.masai.repository.CustomerDao;
-import com.masai.repository.DriverDao;
 import com.masai.repository.SessionDao;
 
 import net.bytebuddy.utility.RandomString;
 
 @Service
 public class UserLogInImpl implements UserLogIn {
-	@Autowired
-	private AdminDao adminDao;
 
-	@Autowired
-	private DriverDao driverDao;
+    @Autowired
+    private CustomerDao customerDao;
 
-	@Autowired
-	private CustomerDao customerDao;
+    @Autowired
+    private SessionDao sessionDao;
 
-	@Autowired
-	private SessionDao sessionDao;
+    @Override
+    public String logIntoAccount(CustomerDTO userDto) {
+        return loginWithUserIdAndPassword(userDto.getUserId(), userDto.getPassword());
+    }
 
-	@Override
-	public String logIntoAccount(CustomerDTO userDto) {
-		Optional<Customer> opt_customer = customerDao.findById(userDto.getUserId());
-//		Optional<Driver> opt_driver = driverDao.findById(userDto.getUserId());
-//		Optional<Admin> opt_admin = adminDao.findById(userDto.getUserId());
+    /**
+     * 新的登录方法 - 支持LoginRequest
+     * 可以直接被Controller调用
+     */
+    public String loginWithRequest(LoginRequest loginRequest) {
+        return loginWithUserIdAndPassword(loginRequest.getUserId(), loginRequest.getPassword());
+    }
 
-		Integer userId = opt_customer.get().getUserId();
+    /**
+     * 统一的登录逻辑处理
+     */
+    private String loginWithUserIdAndPassword(Integer userId, String password) {
+        Optional<Customer> opt_customer = customerDao.findById(userId);
 
-		Optional<CurrentUserSession> currentUserOptional = sessionDao.findById(userId);
+        // 检查用户是否存在
+        if (!opt_customer.isPresent()) {
+            throw new AdminExceptions("用户不存在");
+        }
 
-		if (!opt_customer.isPresent()) {
-			throw new AdminExceptions("user not found");
-		}
-		if (currentUserOptional.isPresent()) {
-			throw new UserAlreadyExistWithuserId("User already logged in with this number");
-		}
-		if (opt_customer.get().getPassword().equals(userDto.getPassword())) {
-			String key = RandomString.make(6);
-			CurrentUserSession currentUserSession = new CurrentUserSession(opt_customer.get().getUserId(), key,
-					LocalDateTime.now());
-			sessionDao.save(currentUserSession);
+        Customer customer = opt_customer.get();
 
-			return currentUserSession.toString();
-		} else {
-			throw new InvalidPasswordException("Please Enter Valid Password");
-		}
+        // 检查是否已经登录
+        Optional<CurrentUserSession> currentUserOptional = sessionDao.findById(userId);
+        if (currentUserOptional.isPresent()) {
+            throw new UserAlreadyExistWithuserId("该用户已登录");
+        }
 
-	}
+        // 验证密码
+        if (customer.getPassword().equals(password)) {
+            String key = RandomString.make(6);
+            CurrentUserSession currentUserSession = new CurrentUserSession(
+                    customer.getUserId(),
+                    key,
+                    LocalDateTime.now()
+            );
+            sessionDao.save(currentUserSession);
 
-	@Override
-	public String logOutFromAccount(String key) {
-		Optional<CurrentUserSession> currentUserOptional = sessionDao.findByUuid(key);
+            return currentUserSession.toString();
+        } else {
+            throw new InvalidPasswordException("密码错误");
+        }
+    }
 
-		if (!currentUserOptional.isPresent()) {
-			throw new NotFoundException("User is not logged in with this number");
-		}
+    @Override
+    public String logOutFromAccount(String key) {
+        Optional<CurrentUserSession> currentUserOptional = sessionDao.findByUuid(key);
 
-		CurrentUserSession currentUserSession = currentUserOptional.get();
-		sessionDao.delete(currentUserSession);
+        if (!currentUserOptional.isPresent()) {
+            throw new NotFoundException("用户未登录");
+        }
 
-		return "Logged Out...";
-	}
+        CurrentUserSession currentUserSession = currentUserOptional.get();
+        sessionDao.delete(currentUserSession);
 
+        return "登出成功";
+    }
 }

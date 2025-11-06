@@ -14,20 +14,19 @@ import com.masai.service.UserLogInImpl;
 
 @RestController
 public class LoginController {
-	
-	@Autowired
-	private UserLogInImpl userLogIn;
 
-	// for user Login
-	@PostMapping(value = "/login")
-	public String logInCustomer(@Valid @RequestBody CustomerDTO customerDTO) {
-		return userLogIn.logIntoAccount(customerDTO);
-	}
-	
-	// for user Logout
-	@PatchMapping(value = "/logout")
-	public String logOutCustomer(@RequestParam(required = false) String key) {
-		return userLogIn.logOutFromAccount(key);
-	}
+    @Autowired
+    private UserLogInImpl userLogIn;
 
+    // 用户登录 - 直接使用新的LoginRequest
+    @PostMapping(value = "/login")
+    public String logInCustomer(@Valid @RequestBody LoginRequest loginRequest) {
+        return userLogIn.loginWithRequest(loginRequest);
+    }
+
+    // 用户登出
+    @PatchMapping(value = "/logout")
+    public String logOutCustomer(@RequestParam(required = false) String key) {
+        return userLogIn.logOutFromAccount(key);
+    }
 }

@@ -3,6 +3,7 @@ package com.masai.entity;
 import javax.persistence.Entity;
 import javax.persistence.PrimaryKeyJoinColumn;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 

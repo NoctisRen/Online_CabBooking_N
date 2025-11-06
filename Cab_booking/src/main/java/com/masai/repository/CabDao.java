@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.masai.entity.Cab;
+import com.masai.entity.Driver;
 
 @Repository
 public interface CabDao extends JpaRepository<Cab, Integer> {

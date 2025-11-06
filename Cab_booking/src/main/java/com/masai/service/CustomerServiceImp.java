@@ -1,110 +1,99 @@
 package com.masai.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import com.masai.dto.request.CustomerCreateRequest;
-import com.masai.dto.request.LoginRequest;
-import com.masai.dto.response.CustomerResponse;
+import com.masai.repository.AddressDao;
+import com.masai.repository.CustomerDao;
+import com.masai.entity.Address;
 import com.masai.entity.Customer;
 import com.masai.exception.InvalidId;
 import com.masai.exception.Nullexception;
-import com.masai.mapper.DtoMapper;
-import com.masai.repository.AddressDao;
-import com.masai.repository.CustomerDao;
+
 
 @Service
-@Transactional
 public class CustomerServiceImp implements CustomerService {
-
-    @Autowired
-    private CustomerDao cdao;
-
+ 
+	@Autowired
+	private CustomerDao cdao;
     @Autowired
     private AddressDao Adao;
+	
+	
+	@Override
+    	public Customer saveCustomer(Customer customer) {
+		return cdao.save(customer);
+	}
 
-    @Autowired
-    private DtoMapper dtoMapper;
 
-    @Override
-    public CustomerResponse saveCustomer(CustomerCreateRequest request) {
-        Customer customer = dtoMapper.requestToCustomer(request);
-        Customer savedCustomer = cdao.save(customer);
-        return dtoMapper.customerToResponse(savedCustomer);
-    }
+	@Override
+	public Customer findCustomer(Integer id) throws InvalidId {
+	
 
-    @Override
-    public CustomerResponse findCustomer(Integer id) throws InvalidId {
-        Customer customer = cdao.findById(id)
-                .orElseThrow(() -> new InvalidId("Customer with ID " + id + " does not exist"));
-        return dtoMapper.customerToResponse(customer);
-    }
+		Customer ct=cdao.findById(id).orElseThrow(() -> new InvalidId("Customer with ID "+id+" does not exit.."));
+		
+		
+		return ct;
+		
+	}
+	@Override
+	public Customer updateCustomer(Customer customer, Integer id) throws InvalidId {
+		
+		Customer c1=cdao.findById(id).orElseThrow(() -> new InvalidId("Customer with ID "+id+" does not exit.."));
+		
+	Integer aid=	c1.getAddress().getId();
+		
+		c1.setAddress(customer.getAddress());
+		c1.setEmail(customer.getEmail());
+		c1.setMobile(customer.getMobile());
+		c1.setPassword(customer.getPassword());
+		c1.setUsername(customer.getUsername());
+		Address a1=Adao.findById(aid).orElseThrow(() -> new InvalidId("Address with ID "+aid+" does not exit.."));
+		Adao.delete(a1);
+		Adao.save(customer.getAddress());
+		
+		return c1;
+	}
 
-    @Override
-    @Transactional
-    public CustomerResponse updateCustomer(CustomerCreateRequest request, Integer id) throws InvalidId {
-        Customer existingCustomer = cdao.findById(id)
-                .orElseThrow(() -> new InvalidId("Customer with ID " + id + " does not exist"));
 
-        // 保存旧地址ID用于清理
-        Integer oldAddressId = existingCustomer.getAddress().getId();
+	@Override
+	public String deleteCustomer(Integer id) throws InvalidId {
+		// TODO Auto-generated method stub
+		Customer ct=cdao.findById(id).orElseThrow(() -> new InvalidId("Customer with ID "+id+" does not exit.."));
+		Adao.delete(ct.getAddress());
+		cdao.delete(ct);
+		
+		return "delete...";
+	}
 
-        // 使用Mapper更新字段
-        dtoMapper.updateCustomerFromRequest(request, existingCustomer);
 
-        // 清理旧地址
-        Adao.findById(oldAddressId).ifPresent(Adao::delete);
+	@Override
+	public List<Customer> allCustomer() throws Nullexception {
+		List<Customer> c1  =cdao.findAll();
+		if(c1.size()==0)
+			throw new Nullexception("EMPTY NO DATA AVAILABLE");
+		return c1;
+	}
 
-        // 保存新地址
-        Customer updatedCustomer = cdao.save(existingCustomer);
-        return dtoMapper.customerToResponse(updatedCustomer);
-    }
 
-    @Override
-    @Transactional
-    public String deleteCustomer(Integer id) throws InvalidId {
-        Customer customer = cdao.findById(id)
-                .orElseThrow(() -> new InvalidId("Customer with ID " + id + " does not exist"));
+	@Override
+	public Customer vaildCustomer(String Email, String Password) throws InvalidId {
+		// TODO Auto-generated method stub
+		
+		List<Customer> c1  =cdao.findAll();
+		for(int i= 0; i < c1.size(); i++) {
+			if(c1.get(i).getEmail().equals(Email) && c1.get(i).getPassword().equals(Password))
+			     return c1.get(i);
+			}
+		 throw new InvalidId("Invalid Email and password");
+	}
 
-        // 删除关联地址
-        Adao.delete(customer.getAddress());
-        cdao.delete(customer);
 
-        return "Customer with ID " + id + " has been deleted successfully";
-    }
 
-    @Override
-    public List<CustomerResponse> allCustomer() throws Nullexception {
-        List<Customer> customers = cdao.findAll();
-        if (customers.isEmpty()) {
-            throw new Nullexception("No customers available");
-        }
 
-        return customers.stream()
-                .map(dtoMapper::customerToResponse)
-                .collect(Collectors.toList());
-    }
 
-    @Override
-    public CustomerResponse validCustomer(LoginRequest loginRequest) throws InvalidId {
-        List<Customer> customers = cdao.findAll();
+	
 
-        return customers.stream()
-                .filter(customer ->
-                        customer.getEmail().equals(loginRequest.getEmail()) &&
-                                customer.getPassword().equals(loginRequest.getPassword()))
-                .findFirst()
-                .map(dtoMapper::customerToResponse)
-                .orElseThrow(() -> new InvalidId("Invalid email or password"));
-    }
-
-    @Override
-    public Customer getCustomerEntity(Integer id) throws InvalidId {
-        return cdao.findById(id)
-                .orElseThrow(() -> new InvalidId("Customer with ID " + id + " does not exist"));
-    }
 }
