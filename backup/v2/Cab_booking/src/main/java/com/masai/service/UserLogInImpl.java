@@ -1,4 +1,3 @@
-// com.masai.service.UserLogInImpl.java - 修改后完整版本
 package com.masai.service;
 
 import java.time.LocalDateTime;
@@ -11,13 +10,11 @@ import com.masai.dto.request.LoginRequest;
 import com.masai.entity.CurrentUserSession;
 import com.masai.entity.Customer;
 import com.masai.entity.CustomerDTO;
-import com.masai.entity.Driver;
 import com.masai.exception.AdminExceptions;
 import com.masai.exception.InvalidPasswordException;
 import com.masai.exception.NotFoundException;
 import com.masai.exception.UserAlreadyExistWithuserId;
 import com.masai.repository.CustomerDao;
-import com.masai.repository.DriverDao;
 import com.masai.repository.SessionDao;
 
 import net.bytebuddy.utility.RandomString;
@@ -27,9 +24,6 @@ public class UserLogInImpl implements UserLogIn {
 
     @Autowired
     private CustomerDao customerDao;
-
-    @Autowired
-    private DriverDao driverDao;
 
     @Autowired
     private SessionDao sessionDao;
@@ -48,33 +42,18 @@ public class UserLogInImpl implements UserLogIn {
     }
 
     /**
-     * 统一的登录逻辑处理 - 支持Customer和Driver
+     * 统一的登录逻辑处理
      */
     private String loginWithUserIdAndPassword(Integer userId, String password) {
-        // 首先检查Customer表
         Optional<Customer> opt_customer = customerDao.findById(userId);
 
-        if (opt_customer.isPresent()) {
-            Customer customer = opt_customer.get();
-            return processLogin(customer.getUserId(), customer.getPassword(), password, "customer");
+        // 检查用户是否存在
+        if (!opt_customer.isPresent()) {
+            throw new AdminExceptions("用户不存在");
         }
 
-        // 如果Customer不存在，检查Driver表
-        Optional<Driver> opt_driver = driverDao.findById(userId);
+        Customer customer = opt_customer.get();
 
-        if (opt_driver.isPresent()) {
-            Driver driver = opt_driver.get();
-            return processLogin(driver.getUserId(), driver.getPassword(), password, "driver");
-        }
-
-        // 如果都不存在，抛出异常
-        throw new AdminExceptions("用户不存在");
-    }
-
-    /**
-     * 处理登录逻辑的通用方法
-     */
-    private String processLogin(Integer userId, String storedPassword, String inputPassword, String userType) {
         // 检查是否已经登录
         Optional<CurrentUserSession> currentUserOptional = sessionDao.findById(userId);
         if (currentUserOptional.isPresent()) {
@@ -82,17 +61,16 @@ public class UserLogInImpl implements UserLogIn {
         }
 
         // 验证密码
-        if (storedPassword.equals(inputPassword)) {
+        if (customer.getPassword().equals(password)) {
             String key = RandomString.make(6);
             CurrentUserSession currentUserSession = new CurrentUserSession(
-                    userId,
+                    customer.getUserId(),
                     key,
                     LocalDateTime.now()
             );
             sessionDao.save(currentUserSession);
 
-            // 在返回信息中包含用户类型
-            return currentUserSession.toString() + ", userType=" + userType;
+            return currentUserSession.toString();
         } else {
             throw new InvalidPasswordException("密码错误");
         }
